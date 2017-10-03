@@ -1,10 +1,15 @@
+/*
+ * This class is taken from in-class discussion and lab work.  
+ */
 public class Orange {
+	
     public enum State {
-        Fetched(15),
-        Peeled(38),
-        Squeezed(29),
-        Bottled(17),
-        Processed(1);
+    	// arbitrary numbers to show passage of time for each task
+        Fetched(10),
+        Peeled(20),
+        Squeezed(30),
+        Bottled(20),
+        Processed(40);
 
         private static final int finalIndex = State.values().length - 1;
 
