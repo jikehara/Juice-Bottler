@@ -65,6 +65,7 @@ public class Plant implements Runnable {
                            " bottles of orange juice, wasted " + totalWasted + " oranges");
     }
 
+    // Give time for the program to run, or pass it an error message if it breaks
     private static void delay(long time, String errMsg) {
         long sleepTime = Math.max(1, time);
         try {
@@ -107,6 +108,7 @@ public class Plant implements Runnable {
         System.out.println("");
     }
 
+    // tracks the total number of fully processed oranges
     public void processEntireOrange(Orange o) {
         while (o.getState() != Orange.State.Bottled) {
             o.runProcess();
