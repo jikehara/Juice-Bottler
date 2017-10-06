@@ -1,5 +1,5 @@
+import java.util.LinkedList;
 import java.util.Queue;
-
 /*
  *  Adapted from class lab example of Plant.java
  *  Code and concepts for Queue retrieved from https://docs.oracle.com/javase/7/docs/api/java/util/Queue.html
@@ -8,27 +8,28 @@ public class Plant implements Runnable {
 	// How long do we want to run the juice processing
 	public static final long PROCESSING_TIME = 5 * 1000;
 	// How many plants do we want to process the oranges?
-	private static final int NUM_PLANTS = 1;
+	private static final int NUM_PLANTS = 2;
 	// How many oranges are we going to juice in each bottle
-	public final int ORANGES_PER_BOTTLE = 4;
-	// How many workers per plant
+	public static final int ORANGES_PER_BOTTLE = 4;
+	// 1 worker for each task in the bottling cycle
 	public static final int WORKERS_PER_PLANT = 5;
-	// times for workers to complete a task
-//	private Queue<Object> fetched;
-	private Queue<Object> peeled;
-	private Queue<Object> juiced;
-	private Queue<Object> bottled;
-	private Queue<Object> processed;
+	// queues for each "assembly line" stage of an orange
+	private Queue<Orange> fetched = new LinkedList<Orange>();
+	private Queue<Orange> peeled = new LinkedList<Orange>();
+	private Queue<Orange> juiced = new LinkedList<Orange>();
+	private Queue<Orange> bottled = new LinkedList<Orange>();
+	private Queue<Orange> processed = new LinkedList<Orange>();
+	
+	private Worker[] workers;
 
-	// We have oranges provided, procesed, and time to work.
+	// We have oranges provided, processed, and time to work.
 	private final Thread thread;
 	private int orangesProvided;
 	private int orangesProcessed;
 	private volatile boolean timeToWork;
 
-
 	public static void main(String[] args) {
-		// Intialize and start "NUM_PLANTS" amount of plants
+		// Initialize and start "NUM_PLANTS" amount of plants
 		Plant[] plants = new Plant[NUM_PLANTS];
 		for (int i = 0; i < NUM_PLANTS; i++) {
 			plants[i] = new Plant();
@@ -57,6 +58,7 @@ public class Plant implements Runnable {
 			totalBottles += p.getBottles();
 			totalWasted += p.getWaste();
 		}
+		System.out.println("");
 		System.out.println("Total provided/processed = " + totalProvided + "/" + totalProcessed);
 		System.out.println("Created " + totalBottles + " bottles of orange juice, wasted " + totalWasted + " oranges");
 	}
@@ -77,10 +79,14 @@ public class Plant implements Runnable {
 		thread = new Thread(this, "Plant");
 	}
 
-	// spawn workers and start them
+	// spawn workers and start them, setting first worker as the fetcher
 	public void startPlant() {
 		timeToWork = true;
-		Worker[] workers = new Worker[WORKERS_PER_PLANT];
+		workers = new Worker[WORKERS_PER_PLANT];
+		for (int i = 0; i < workers.length; i++) {
+			workers[i] = new Worker(false);
+		}
+		workers[0].setFetcher(true);
 		thread.start();
 	}
 
@@ -97,22 +103,97 @@ public class Plant implements Runnable {
 		}
 	}
 
+	/*
+	 * Plant only provides oranges while the plant is running and a worker is
+	 * available to begin processing orange
+	 */
 	public void run() {
 		System.out.println(Thread.currentThread().getName() + " Processing oranges");
 		while (timeToWork) {
+			// if fetcher is available, else wait
 			orangesProvided++;
-			processEntireOrange(new Orange());
-			System.out.print(".");
+			try {
+				fetchOrange(new Orange());
+				peelOrange();
+				juiceOrange();
+				bottleOrange();
+				processOrange();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			// processOrange();
 		}
-		System.out.println("");
 	}
 
-	// 
-	public void processEntireOrange(Orange o) {
-		while (o.getState() != Orange.State.Bottled) {
+	// slightly abstract method processes a single step of the orange
+	public void processOrange(Queue<Orange> in, Queue<Orange> out) {
+		/*
+		 * if the worker can pull an orange from the previous queue
+		 * then he takes it and processes it and puts it in the next queue
+		 */
+		if (in.peek() != null) {
+			Orange o = (Orange) in.remove();
 			o.runProcess();
+			out.add(o);
+		}		
+	}
+
+	// fetches an orange into the fetched queue and begins the assembly line
+	public void fetchOrange(Orange o) throws InterruptedException {
+		if (!this.workers[0].isProcessingOrange()) {
+			workers[0].doTask();
+			fetched.add(o);
+			workers[0].completeTask();
+			System.out.print("f ");
 		}
-		orangesProcessed++;
+		
+	}
+
+	/*
+	 * following four processes take orange from one queue, process it, then send it
+	 * to the next queue WARNING: Does not follow DRY (Although I did trim it down
+	 * substantially)
+	 */
+	public void peelOrange() {
+		// check if peeler is available
+		if (!this.workers[1].isProcessingOrange()) {
+			workers[1].doTask();
+			processOrange(fetched, peeled);
+			workers[1].completeTask();
+			System.out.print("pe ");
+		}		
+	}
+
+	public void juiceOrange() {
+		// check if juicer is available
+		if (!this.workers[2].isProcessingOrange()) {
+			workers[2].doTask();
+			processOrange(peeled, juiced);
+			workers[2].completeTask();
+			System.out.print("j ");
+		}
+	}
+
+	public void bottleOrange() {
+		// check if bottler is available
+		if (!this.workers[3].isProcessingOrange()) {
+			workers[3].doTask();
+			processOrange(juiced, bottled);
+			workers[3].completeTask();
+			System.out.print("b ");
+		}
+	}
+
+	public void processOrange() {
+		// check if processor is available
+		if (!this.workers[4].isProcessingOrange()) {
+			workers[4].doTask();
+			processOrange(bottled, processed);
+			workers[4].completeTask();
+			System.out.print("pr ");
+		}
 	}
 
 	// returns total oranges fetched/provided
@@ -122,16 +203,17 @@ public class Plant implements Runnable {
 
 	// returns total number of oranges processed
 	public int getProcessedOranges() {
+		orangesProcessed = processed.size();
 		return orangesProcessed;
 	}
 
-	// returns total bottles
+	// returns total full bottles
 	public int getBottles() {
 		return orangesProcessed / ORANGES_PER_BOTTLE;
 	}
 
 	// returns number of oranges that were processed but not bottled
 	public int getWaste() {
-		return orangesProcessed % ORANGES_PER_BOTTLE;
+		return orangesProvided - orangesProcessed + (orangesProcessed % ORANGES_PER_BOTTLE);
 	}
 }

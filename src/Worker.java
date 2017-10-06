@@ -1,20 +1,19 @@
 public class Worker {
 
-	private int timeToComplete;
-	private boolean orangeIn;
-	private boolean orangeOut;
+	// boolean to check if this worker will be getting from a queue (check if they are fetcher or not)
+	private boolean isFetcher = false;
 	private boolean processingOrange = false;
 
-	public Worker(int passedTimeToComplete, boolean passOrangeIn, boolean passOrangeOut) {
-		timeToComplete = passedTimeToComplete;
-		orangeIn = passOrangeIn;
-		orangeOut = passOrangeOut;
+	public Worker(boolean isFetcher) {
+		this.isFetcher = isFetcher;
 	}
-
-	private synchronized void doTask() {
-		// If worker needs oranges to come in to do task and there are none currently passed in, then worker waits
-		while (orangeIn && !processingOrange) {
-			// wait for a notification that an orange has been passed in
+	
+	/*
+	 *  Method for the worker to perform their task
+	 *  Adapted from the in-class Mutex demo
+	 */
+	protected synchronized void doTask() {
+		while (isProcessingOrange()) {
 			try {
 				wait();
 			} catch (InterruptedException e) {
@@ -22,16 +21,29 @@ public class Worker {
 				e.printStackTrace();
 			}
 		}
-		try {
-			processingOrange = true;
-			Thread.sleep(timeToComplete);
-			if (orangeOut) {
-				// notify the next worker that an orange has finished this step
-				notifyAll();
-			}
-			processingOrange = false;
-		} catch (InterruptedException e) {
-			System.err.println("Incomplete orange processing, juice may be bad");
-		}
+		setProcessingOrange(true);		
+	}
+	
+	protected synchronized void completeTask() {
+		setProcessingOrange(false);
+		notifyAll();
+	}	
+	/*
+	 * gets whether the worker is a fetcher
+	 */			
+	public boolean amIFetcher() {
+		return isFetcher;
+	}
+	
+	public void setFetcher(boolean fetcher) {
+		isFetcher = fetcher;
+	}
+
+	public boolean isProcessingOrange() {
+		return processingOrange;
+	}
+
+	public void setProcessingOrange(boolean processingOrange) {
+		this.processingOrange = processingOrange;
 	}
 }
