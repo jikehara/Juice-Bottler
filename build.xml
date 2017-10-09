@@ -12,7 +12,7 @@
 <target name="jar" depends="init,compile">
 <jar destfile="${dist}/${ant.project.name}.jar" basedir="${dist}/classes">
 <manifest>
-<attribute name="Main-Class" value="JuiceBottler"/>
+<attribute name="Main-Class" value="Plant"/>
 </manifest>
 </jar>
 </target>

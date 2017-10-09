@@ -6,14 +6,13 @@ import java.util.Queue;
  *  Code and concepts for Queue retrieved from https://docs.oracle.com/javase/7/docs/api/java/util/Queue.html
  */
 public class Plant implements Runnable {
-	// How long do we want to run the juice processing
+	// How long do we want to run the juice processing, oranges are we going to juice in each bottle, 
+	// and how many workers for the plant
 	public static final long PROCESSING_TIME = 5 * 1000;
-	// How many plants do we want to process the oranges?
-	private static final int NUM_PLANTS = 2;
-	// How many oranges are we going to juice in each bottle
 	public static final int ORANGES_PER_BOTTLE = 4;
-	// 1 worker for each task in the bottling cycle
 	public static final int WORKERS_PER_PLANT = 5;
+	// How many plants do we want to process the oranges?
+	private static final int NUM_PLANTS = 2;	
 	// queues for each "assembly line" stage of an orange
 	private Queue<Orange> fetched = new LinkedList<Orange>();
 	private Queue<Orange> peeled = new LinkedList<Orange>();
@@ -21,12 +20,11 @@ public class Plant implements Runnable {
 	private Queue<Orange> bottled = new LinkedList<Orange>();
 	private Queue<Orange> processed = new LinkedList<Orange>();
 
+	// We have workers, oranges provided, processed, and time to work.
 	private Worker[] workers;
-
-	// We have oranges provided, processed, and time to work.
 	private final Thread thread;
-	private int orangesProvided;
-	private int orangesProcessed;
+	private volatile int orangesProvided;
+	private volatile int orangesProcessed;
 	private volatile boolean timeToWork;
 
 	public static void main(String[] args) {
@@ -112,57 +110,40 @@ public class Plant implements Runnable {
 		System.out.println(Thread.currentThread().getName() + " Processing oranges");
 		for (int i = 0; i < workers.length; i++) {
 			workers[i].startWorker();
-			workers[i].getTimeToWork(true);
 		}			
 		while (timeToWork) {
 			// if worker is available, have them begin work
 			try {
 				if (!workers[0].isProcessingOrange()) {
-					fetchOrange(new Orange());
-				} else {
-					workers[0].completeTask();
-				}
+					fetchOrange(new Orange(), workers[0]);
+				} 
 				if (!workers[1].isProcessingOrange()) {
-					peelOrange();
-				} else {
-					workers[1].completeTask();
-				}
+					peelOrange(workers[1]);
+				} 
 				if (!workers[2].isProcessingOrange()) {
-					juiceOrange();
-				} else {
-					workers[2].completeTask();
-				}
+					juiceOrange(workers[2]);
+				} 
 				if (!workers[3].isProcessingOrange()) {
-					bottleOrange();
-				} else {
-					workers[3].completeTask();
+					bottleOrange(workers[3]);
 				}
 				if (!workers[4].isProcessingOrange()) {
-					processOrange();
-				} else {
-					workers[4].completeTask();
-				}
+					finishOrange(workers[4]);
+				} 
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-
-			// processOrange();
 		}
 		for (int i = 0; i < workers.length; i++) {
 			workers[i].stopWorker();
-			workers[i].getTimeToWork(false);
 		}
-			
-		
 	}
 
-	// slightly abstract method processes a single step of the orange
-	public void processOrange(Queue<Orange> in, Queue<Orange> out) {
-		/*
-		 * if the worker can pull an orange from the previous queue then he takes it and
-		 * processes it and puts it in the next queue
-		 */
+	/*
+	 * if the worker can pull an orange from the previous queue then he takes it and
+	 * processes it and puts it in the next queue
+	 */
+	public void processOrange(Queue<Orange> in, Queue<Orange> out) {		
 		if (in.peek() != null) {
 			Orange o = (Orange) in.remove();
 			o.runProcess();
@@ -171,11 +152,9 @@ public class Plant implements Runnable {
 	}
 
 	// fetches an orange into the fetched queue and begins the assembly line
-	public void fetchOrange(Orange o) throws InterruptedException {
-		workers[0].doTask();
+	public void fetchOrange(Orange o, Worker w) throws InterruptedException {
 		fetched.add(o);
-//		workers[0].completeTask();
-		System.out.println("f ");
+		System.out.print("f");
 		orangesProvided++;
 	}
 
@@ -184,33 +163,25 @@ public class Plant implements Runnable {
 	 * to the next queue WARNING: Does not follow DRY (Although I did trim it down
 	 * substantially)
 	 */
-	public void peelOrange() {
-		// check if peeler is available
-		workers[1].doTask();
+	public void peelOrange(Worker w) {
 		processOrange(fetched, peeled);
-//		workers[1].completeTask();// this is the problem - peel orange should only start the thread, not complete it
-		System.out.println("pe ");
+		System.out.print("pe");
 	}
 
-	public void juiceOrange() {
-		workers[2].doTask();
+	public void juiceOrange(Worker w) {
 		processOrange(peeled, juiced);
-//		workers[2].completeTask();
-		System.out.println("j ");
+		System.out.print("j");
 	}
 
-	public void bottleOrange() {
-		workers[3].doTask();
+	public void bottleOrange(Worker w) {
 		processOrange(juiced, bottled);
-//		workers[3].completeTask();
-		System.out.println("b ");
+		System.out.print("b");
 	}
 
-	public void processOrange() {
-		workers[4].doTask();
+	public void finishOrange(Worker w) {
 		processOrange(bottled, processed);
-//		workers[4].completeTask();
-		System.out.println("pr ");
+		System.out.print("finish");
+		orangesProcessed++;
 	}
 
 	// returns total oranges fetched/provided
@@ -220,7 +191,6 @@ public class Plant implements Runnable {
 
 	// returns total number of oranges processed
 	public int getProcessedOranges() {
-		orangesProcessed = processed.size();
 		return orangesProcessed;
 	}
 

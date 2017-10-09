@@ -1,24 +1,34 @@
-import java.util.Queue;
+
 
 public class Worker implements Runnable {
 
-	// boolean to check if this worker will be getting from a queue (check if they are fetcher or not)
+	/*
+	 * Booleans to check if a worker is fetching oranges or performing other tasks,
+	 * if they're working or not, and if they're performing a task or not.
+	 */
 	private boolean isFetcher = false;
 	private boolean processingOrange = false;
 	private boolean timeToWork = false;
 	private Orange o;
 	Thread thread;
 
+	/**
+	 * Constructor with isFetcher param to determine if a worker fetches oranges
+	 * or performs a different task
+	 * @param isFetcher
+	 */
 	public Worker(boolean isFetcher) {
 		this.isFetcher = isFetcher;
 		thread = new Thread("Worker");
 	}
-	
+
 	public void startWorker() {
+		timeToWork = true;
 		thread.start();
 	}
-	
+
 	public void stopWorker() {
+		timeToWork = false;
 		try {
 			thread.join();
 		} catch (InterruptedException e) {
@@ -26,13 +36,12 @@ public class Worker implements Runnable {
 			e.printStackTrace();
 		}
 	}
-	
+
 	/*
-	 *  Method for the worker to perform their task
-	 *  Adapted from the in-class Mutex demo
+	 * Method for the worker to perform their task Adapted from the in-class Mutex
 	 */
-	protected synchronized void doTask() {
-		while (isProcessingOrange()) {
+	private synchronized void doTask() {
+		while (this.processingOrange) {
 			try {
 				wait();
 			} catch (InterruptedException e) {
@@ -40,20 +49,21 @@ public class Worker implements Runnable {
 				e.printStackTrace();
 			}
 		}
-		setProcessingOrange(true);		
+		setProcessingOrange(true);
 	}
-	
-	protected synchronized void completeTask() {
+
+	private synchronized void completeTask() {
 		setProcessingOrange(false);
 		notifyAll();
-	}	
+	}
+
 	/*
-	 * gets whether the worker is a fetcher
-	 */			
+	 * getters and setters whether the worker is a fetcher, is processing an orange, and get an orange
+	 */
 	public boolean amIFetcher() {
 		return isFetcher;
 	}
-	
+
 	public void setFetcher(boolean fetcher) {
 		isFetcher = fetcher;
 	}
@@ -62,38 +72,30 @@ public class Worker implements Runnable {
 		return processingOrange;
 	}
 
+	/**
+	 * returns the boolean value of whether a worker is processing orange or not
+	 * @param processingOrange
+	 */
 	public void setProcessingOrange(boolean processingOrange) {
 		this.processingOrange = processingOrange;
 	}
-	
+
+	/**
+	 * returns the state of a passed Orange o
+	 * @param o
+	 */
 	public void getOrange(Orange o) {
 		this.o = o;
 	}
-
-	public void getTimeToWork(boolean t) {
-		this.timeToWork = t;
-	}
-	
+	/**
+	 * Allows worker to process oranges
+	 */
 	public void run() {
 		// TODO Auto-generated method stub
 		while (timeToWork) {
-			doTask();
-			o.runProcess();
-			completeTask();
+			 doTask();
+			 o.runProcess();
+			 completeTask();
 		}
 	}
-	
-// slightly abstract method processes a single step of the orange
-	public void processOrange(Queue<Orange> in, Queue<Orange> out) {
-		/*
-		 * if the worker can pull an orange from the previous queue then he takes it and
-		 * processes it and puts it in the next queue
-		 */
-		if (in.peek() != null) {
-			Orange o = (Orange) in.remove();
-			o.runProcess();
-			out.add(o);
-		}
-	}
-		
 }
