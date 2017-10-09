@@ -5,7 +5,7 @@ public class Orange {
 
 	public enum State {
 		// numbers show the time it takes to pass from one state to the next
-		Fetched(5), Peeled(19), Squeezed(27), Bottled(26), Processed(51);
+		Fetched(7), Peeled(19), Squeezed(27), Bottled(26), Processed(51);
 
 		private static final int finalIndex = State.values().length - 1;
 
@@ -26,7 +26,8 @@ public class Orange {
 
 	private State state;
 
-	// constructor -> initialized state to "Fetched" and then begin processing Orange
+	// constructor -> initialized state to "Fetched" and then begin processing
+	// Orange
 	public Orange() {
 		state = State.Fetched;
 		doWork();

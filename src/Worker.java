@@ -3,9 +3,24 @@ public class Worker {
 	// boolean to check if this worker will be getting from a queue (check if they are fetcher or not)
 	private boolean isFetcher = false;
 	private boolean processingOrange = false;
+	Thread thread;
 
 	public Worker(boolean isFetcher) {
 		this.isFetcher = isFetcher;
+		thread = new Thread("Worker");
+	}
+	
+	public void startWorker() {
+		thread.start();
+	}
+	
+	public void stopWorker() {
+		try {
+			thread.join();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	/*

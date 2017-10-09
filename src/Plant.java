@@ -1,12 +1,13 @@
 import java.util.LinkedList;
 import java.util.Queue;
+
 /*
  *  Adapted from class lab example of Plant.java
  *  Code and concepts for Queue retrieved from https://docs.oracle.com/javase/7/docs/api/java/util/Queue.html
  */
 public class Plant implements Runnable {
 	// How long do we want to run the juice processing
-	public static final long PROCESSING_TIME = 5 * 1000;
+	public static final long PROCESSING_TIME = 10 * 1000;
 	// How many plants do we want to process the oranges?
 	private static final int NUM_PLANTS = 2;
 	// How many oranges are we going to juice in each bottle
@@ -19,7 +20,7 @@ public class Plant implements Runnable {
 	private Queue<Orange> juiced = new LinkedList<Orange>();
 	private Queue<Orange> bottled = new LinkedList<Orange>();
 	private Queue<Orange> processed = new LinkedList<Orange>();
-	
+
 	private Worker[] workers;
 
 	// We have oranges provided, processed, and time to work.
@@ -90,7 +91,7 @@ public class Plant implements Runnable {
 		thread.start();
 	}
 
-	// Lines 88-98 End all threads
+	// ends the plant threads
 	public void stopPlant() {
 		timeToWork = false;
 	}
@@ -109,46 +110,57 @@ public class Plant implements Runnable {
 	 */
 	public void run() {
 		System.out.println(Thread.currentThread().getName() + " Processing oranges");
+		for (int i = 0; i < workers.length; i++)
+			workers[i].startWorker();
 		while (timeToWork) {
-			// if fetcher is available, else wait
-			orangesProvided++;
+			// if worker is available, have them begin work
 			try {
-				fetchOrange(new Orange());
-				peelOrange();
-				juiceOrange();
-				bottleOrange();
-				processOrange();
+				if (!workers[0].isProcessingOrange()) {
+					fetchOrange(new Orange());
+				}
+				if (!workers[1].isProcessingOrange()) {
+					peelOrange();
+				}
+				if (!workers[2].isProcessingOrange()) {
+					juiceOrange();
+				}
+				if (!workers[3].isProcessingOrange()) {
+					bottleOrange();
+				}
+				if (!workers[4].isProcessingOrange()) {
+					processOrange();
+				}
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
+
 			// processOrange();
 		}
+		for (int i = 0; i < workers.length; i++)
+			workers[i].stopWorker();
 	}
 
 	// slightly abstract method processes a single step of the orange
 	public void processOrange(Queue<Orange> in, Queue<Orange> out) {
 		/*
-		 * if the worker can pull an orange from the previous queue
-		 * then he takes it and processes it and puts it in the next queue
+		 * if the worker can pull an orange from the previous queue then he takes it and
+		 * processes it and puts it in the next queue
 		 */
 		if (in.peek() != null) {
 			Orange o = (Orange) in.remove();
 			o.runProcess();
 			out.add(o);
-		}		
+		}
 	}
 
 	// fetches an orange into the fetched queue and begins the assembly line
 	public void fetchOrange(Orange o) throws InterruptedException {
-		if (!this.workers[0].isProcessingOrange()) {
-			workers[0].doTask();
-			fetched.add(o);
-			workers[0].completeTask();
-			System.out.print("f ");
-		}
-		
+		workers[0].doTask();
+		fetched.add(o);
+		workers[0].completeTask();
+		System.out.print("f ");
+		orangesProvided++;
 	}
 
 	/*
@@ -158,42 +170,32 @@ public class Plant implements Runnable {
 	 */
 	public void peelOrange() {
 		// check if peeler is available
-		if (!this.workers[1].isProcessingOrange()) {
-			workers[1].doTask();
-			processOrange(fetched, peeled);
-			workers[1].completeTask();
-			System.out.print("pe ");
-		}		
+		workers[1].doTask();
+		processOrange(fetched, peeled);
+		workers[1].completeTask();// this is the problem - peel orange should only start the thread, not complete it
+		System.out.print("pe ");
 	}
 
 	public void juiceOrange() {
 		// check if juicer is available
-		if (!this.workers[2].isProcessingOrange()) {
-			workers[2].doTask();
-			processOrange(peeled, juiced);
-			workers[2].completeTask();
-			System.out.print("j ");
-		}
+		workers[2].doTask();
+		processOrange(peeled, juiced);
+		workers[2].completeTask();
+		System.out.print("j ");
 	}
 
 	public void bottleOrange() {
-		// check if bottler is available
-		if (!this.workers[3].isProcessingOrange()) {
-			workers[3].doTask();
-			processOrange(juiced, bottled);
-			workers[3].completeTask();
-			System.out.print("b ");
-		}
+		workers[3].doTask();
+		processOrange(juiced, bottled);
+		workers[3].completeTask();
+		System.out.print("b ");
 	}
 
 	public void processOrange() {
-		// check if processor is available
-		if (!this.workers[4].isProcessingOrange()) {
-			workers[4].doTask();
-			processOrange(bottled, processed);
-			workers[4].completeTask();
-			System.out.print("pr ");
-		}
+		workers[4].doTask();
+		processOrange(bottled, processed);
+		workers[4].completeTask();
+		System.out.print("pr ");
 	}
 
 	// returns total oranges fetched/provided
