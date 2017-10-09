@@ -5,7 +5,7 @@ public class Orange {
 
 	public enum State {
 		// numbers show the time it takes to pass from one state to the next
-		Fetched(7), Peeled(19), Squeezed(27), Bottled(26), Processed(51);
+		Fetched(10), Peeled(20), Squeezed(30), Bottled(40), Processed(50);
 
 		private static final int finalIndex = State.values().length - 1;
 

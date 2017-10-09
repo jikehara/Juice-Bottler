@@ -7,7 +7,7 @@ import java.util.Queue;
  */
 public class Plant implements Runnable {
 	// How long do we want to run the juice processing
-	public static final long PROCESSING_TIME = 10 * 1000;
+	public static final long PROCESSING_TIME = 5 * 1000;
 	// How many plants do we want to process the oranges?
 	private static final int NUM_PLANTS = 2;
 	// How many oranges are we going to juice in each bottle
@@ -110,25 +110,37 @@ public class Plant implements Runnable {
 	 */
 	public void run() {
 		System.out.println(Thread.currentThread().getName() + " Processing oranges");
-		for (int i = 0; i < workers.length; i++)
+		for (int i = 0; i < workers.length; i++) {
 			workers[i].startWorker();
+			workers[i].getTimeToWork(true);
+		}			
 		while (timeToWork) {
 			// if worker is available, have them begin work
 			try {
 				if (!workers[0].isProcessingOrange()) {
 					fetchOrange(new Orange());
+				} else {
+					workers[0].completeTask();
 				}
 				if (!workers[1].isProcessingOrange()) {
 					peelOrange();
+				} else {
+					workers[1].completeTask();
 				}
 				if (!workers[2].isProcessingOrange()) {
 					juiceOrange();
+				} else {
+					workers[2].completeTask();
 				}
 				if (!workers[3].isProcessingOrange()) {
 					bottleOrange();
+				} else {
+					workers[3].completeTask();
 				}
 				if (!workers[4].isProcessingOrange()) {
 					processOrange();
+				} else {
+					workers[4].completeTask();
 				}
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
@@ -137,8 +149,12 @@ public class Plant implements Runnable {
 
 			// processOrange();
 		}
-		for (int i = 0; i < workers.length; i++)
+		for (int i = 0; i < workers.length; i++) {
 			workers[i].stopWorker();
+			workers[i].getTimeToWork(false);
+		}
+			
+		
 	}
 
 	// slightly abstract method processes a single step of the orange
@@ -158,8 +174,8 @@ public class Plant implements Runnable {
 	public void fetchOrange(Orange o) throws InterruptedException {
 		workers[0].doTask();
 		fetched.add(o);
-		workers[0].completeTask();
-		System.out.print("f ");
+//		workers[0].completeTask();
+		System.out.println("f ");
 		orangesProvided++;
 	}
 
@@ -172,30 +188,29 @@ public class Plant implements Runnable {
 		// check if peeler is available
 		workers[1].doTask();
 		processOrange(fetched, peeled);
-		workers[1].completeTask();// this is the problem - peel orange should only start the thread, not complete it
-		System.out.print("pe ");
+//		workers[1].completeTask();// this is the problem - peel orange should only start the thread, not complete it
+		System.out.println("pe ");
 	}
 
 	public void juiceOrange() {
-		// check if juicer is available
 		workers[2].doTask();
 		processOrange(peeled, juiced);
-		workers[2].completeTask();
-		System.out.print("j ");
+//		workers[2].completeTask();
+		System.out.println("j ");
 	}
 
 	public void bottleOrange() {
 		workers[3].doTask();
 		processOrange(juiced, bottled);
-		workers[3].completeTask();
-		System.out.print("b ");
+//		workers[3].completeTask();
+		System.out.println("b ");
 	}
 
 	public void processOrange() {
 		workers[4].doTask();
 		processOrange(bottled, processed);
-		workers[4].completeTask();
-		System.out.print("pr ");
+//		workers[4].completeTask();
+		System.out.println("pr ");
 	}
 
 	// returns total oranges fetched/provided

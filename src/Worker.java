@@ -1,8 +1,12 @@
-public class Worker {
+import java.util.Queue;
+
+public class Worker implements Runnable {
 
 	// boolean to check if this worker will be getting from a queue (check if they are fetcher or not)
 	private boolean isFetcher = false;
 	private boolean processingOrange = false;
+	private boolean timeToWork = false;
+	private Orange o;
 	Thread thread;
 
 	public Worker(boolean isFetcher) {
@@ -61,4 +65,35 @@ public class Worker {
 	public void setProcessingOrange(boolean processingOrange) {
 		this.processingOrange = processingOrange;
 	}
+	
+	public void getOrange(Orange o) {
+		this.o = o;
+	}
+
+	public void getTimeToWork(boolean t) {
+		this.timeToWork = t;
+	}
+	
+	public void run() {
+		// TODO Auto-generated method stub
+		while (timeToWork) {
+			doTask();
+			o.runProcess();
+			completeTask();
+		}
+	}
+	
+// slightly abstract method processes a single step of the orange
+	public void processOrange(Queue<Orange> in, Queue<Orange> out) {
+		/*
+		 * if the worker can pull an orange from the previous queue then he takes it and
+		 * processes it and puts it in the next queue
+		 */
+		if (in.peek() != null) {
+			Orange o = (Orange) in.remove();
+			o.runProcess();
+			out.add(o);
+		}
+	}
+		
 }
